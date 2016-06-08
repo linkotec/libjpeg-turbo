@@ -191,34 +191,48 @@ endif()
 # Targets
 #
 
-set(JPEG_SOURCES jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c
+set(JPEG_SOURCES
+  jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c
   jcinit.c jcmainct.c jcmarker.c jcmaster.c jcomapi.c jcparam.c jcphuff.c
   jcprepct.c jcsample.c jctrans.c jdapimin.c jdapistd.c jdatadst.c jdatasrc.c
   jdcoefct.c jdcolor.c jddctmgr.c jdhuff.c jdinput.c jdmainct.c jdmarker.c
   jdmaster.c jdmerge.c jdphuff.c jdpostct.c jdsample.c jdtrans.c jerror.c
   jfdctflt.c jfdctfst.c jfdctint.c jidctflt.c jidctfst.c jidctint.c jidctred.c
-  jquant1.c jquant2.c jutils.c jmemmgr.c jmemnobs.c)
+  jquant1.c jquant2.c jutils.c jmemmgr.c jmemnobs.c
+)
 
 if(WITH_ARITH_ENC OR WITH_ARITH_DEC)
-  set(JPEG_SOURCES ${JPEG_SOURCES} jaricom.c)
+  list(APPEND JPEG_SOURCES
+    jaricom.c
+  )
 endif()
 
 if(WITH_ARITH_ENC)
-  set(JPEG_SOURCES ${JPEG_SOURCES} jcarith.c)
+  list(APPEND JPEG_SOURCES
+    jcarith.c
+  )
 endif()
 
 if(WITH_ARITH_DEC)
-  set(JPEG_SOURCES ${JPEG_SOURCES} jdarith.c)
+  list(APPEND JPEG_SOURCES
+    jdarith.c
+  )
 endif()
 
 if(WITH_SIMD)
   add_definitions(-DWITH_SIMD)
   add_subdirectory(simd)
+
   if(SIMD_X86_64)
-    set(JPEG_SOURCES ${JPEG_SOURCES} simd/jsimd_x86_64.c)
+    list(APPEND JPEG_SOURCES
+      simd/jsimd_x86_64.c
+    )
   else()
-    set(JPEG_SOURCES ${JPEG_SOURCES} simd/jsimd_i386.c)
+    list(APPEND JPEG_SOURCES
+      simd/jsimd_i386.c
+    )
   endif()
+
   # This tells CMake that the "source" files haven't been generated yet
   set_source_files_properties(${SIMD_OBJS} PROPERTIES GENERATED 1)
 else()
@@ -236,10 +250,15 @@ if(ENABLE_SHARED)
 endif()
 
 if(ENABLE_STATIC OR WITH_TURBOJPEG)
-  add_library(jpeg-static STATIC ${JPEG_SOURCES} ${SIMD_OBJS})
+  add_library(jpeg-static STATIC
+    ${JPEG_SOURCES}
+	${SIMD_OBJS}
+  )
+
   if(NOT MSVC)
     set_target_properties(jpeg-static PROPERTIES OUTPUT_NAME jpeg)
   endif()
+
   if(WITH_SIMD)
     add_dependencies(jpeg-static simd)
   endif()
@@ -247,25 +266,29 @@ endif()
 
 if(WITH_TURBOJPEG)
   set(TURBOJPEG_SOURCES turbojpeg.c transupp.c jdatadst-tj.c jdatasrc-tj.c)
+  
   if(WITH_JAVA)
-    set(TURBOJPEG_SOURCES ${TURBOJPEG_SOURCES} turbojpeg-jni.c)
+    list(APPEND TURBOJPEG_SOURCES turbojpeg-jni.c)
     include_directories(${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
   endif()
 
   if(ENABLE_SHARED)
     add_library(turbojpeg SHARED ${TURBOJPEG_SOURCES})
     set_target_properties(turbojpeg PROPERTIES DEFINE_SYMBOL DLLDEFINE)
+
     if(MINGW)
       set_target_properties(turbojpeg PROPERTIES LINK_FLAGS -Wl,--kill-at)
     endif()
+
     target_link_libraries(turbojpeg jpeg-static)
     set_target_properties(turbojpeg PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
     add_executable(tjunittest tjunittest.c tjutil.c)
     target_link_libraries(tjunittest turbojpeg)
 
-    add_executable(tjbench tjbench.c bmp.c tjutil.c rdbmp.c rdppm.c wrbmp.c
-      wrppm.c)
+    add_executable(tjbench
+	  tjbench.c bmp.c tjutil.c rdbmp.c rdppm.c wrbmp.c wrppm.c
+	)
     target_link_libraries(tjbench turbojpeg jpeg-static)
     set_property(TARGET tjbench PROPERTY COMPILE_FLAGS
       "-DBMP_SUPPORTED -DPPM_SUPPORTED")
@@ -274,9 +297,11 @@ if(WITH_TURBOJPEG)
   if(ENABLE_STATIC)
     add_library(turbojpeg-static STATIC ${JPEG_SOURCES} ${SIMD_OBJS}
       turbojpeg.c transupp.c jdatadst-tj.c jdatasrc-tj.c)
-    if(NOT MSVC)
+    
+	if(NOT MSVC)
       set_target_properties(turbojpeg-static PROPERTIES OUTPUT_NAME turbojpeg)
     endif()
+
     if(WITH_SIMD)
       add_dependencies(turbojpeg-static simd)
     endif()
@@ -284,13 +309,14 @@ if(WITH_TURBOJPEG)
     add_executable(tjunittest-static tjunittest.c tjutil.c)
     target_link_libraries(tjunittest-static turbojpeg-static)
 
-    add_executable(tjbench-static tjbench.c bmp.c tjutil.c rdbmp.c rdppm.c
-      wrbmp.c wrppm.c)
+    add_executable(tjbench-static
+	  tjbench.c bmp.c tjutil.c rdbmp.c rdppm.c wrbmp.c wrppm.c
+	)
     target_link_libraries(tjbench-static turbojpeg-static jpeg-static)
     set_property(TARGET tjbench-static PROPERTY COMPILE_FLAGS
       "-DBMP_SUPPORTED -DPPM_SUPPORTED")
-  endif()
-endif()
+  endif(ENABLE_STATIC)
+endif(WITH_TURBOJPEG)
 
 if(WITH_12BIT)
   set(COMPILE_FLAGS "-DGIF_SUPPORTED -DPPM_SUPPORTED -DUSE_SETMODE")
@@ -301,13 +327,15 @@ else()
 endif()
 
 if(ENABLE_STATIC)
-  add_executable(cjpeg-static cjpeg.c cdjpeg.c rdgif.c rdppm.c rdswitch.c
-    ${CJPEG_BMP_SOURCES})
+  add_executable(cjpeg-static
+    cjpeg.c cdjpeg.c rdgif.c rdppm.c rdswitch.c ${CJPEG_BMP_SOURCES}
+  )
   set_property(TARGET cjpeg-static PROPERTY COMPILE_FLAGS ${COMPILE_FLAGS})
   target_link_libraries(cjpeg-static jpeg-static)
 
-  add_executable(djpeg-static djpeg.c cdjpeg.c rdcolmap.c rdswitch.c wrgif.c
-    wrppm.c ${DJPEG_BMP_SOURCES})
+  add_executable(djpeg-static
+    djpeg.c cdjpeg.c rdcolmap.c rdswitch.c wrgif.c wrppm.c ${DJPEG_BMP_SOURCES}
+  )
   set_property(TARGET djpeg-static PROPERTY COMPILE_FLAGS ${COMPILE_FLAGS})
   target_link_libraries(djpeg-static jpeg-static)
 
@@ -317,14 +345,12 @@ if(ENABLE_STATIC)
 endif()
 
 add_executable(rdjpgcom rdjpgcom.c)
-
 add_executable(wrjpgcom wrjpgcom.c)
 
 
 #
 # Tests
 #
-
 add_subdirectory(md5)
 
 if(MSVC_IDE)
@@ -388,6 +414,7 @@ else()
   set(MD5_BMP_GRAY_ISLOW_565 12f78118e56a2f48b966f792fedf23cc)
   set(MD5_BMP_GRAY_ISLOW_565D bdbbd616441a24354c98553df5dc82db)
   set(MD5_JPEG_420S_IFAST_OPT 388708217ac46273ca33086b22827ed8)
+
   if(WITH_SIMD)
     set(MD5_JPEG_3x2_FLOAT_PROG 343e3f8caf8af5986ebaf0bdc13b5c71)
     set(MD5_PPM_3x2_FLOAT 1a75f36e5904d6fc3a85a43da9ad89bb)
@@ -395,6 +422,7 @@ else()
     set(MD5_JPEG_3x2_FLOAT_PROG 9bca803d2042bd1eb03819e2bf92b3e5)
     set(MD5_PPM_3x2_FLOAT f6bfab038438ed8f5522fbd33595dcdc)
   endif()
+
   set(MD5_JPEG_420_ISLOW_ARI e986fb0a637a8d833d96e8a6d6d84ea1)
   set(MD5_JPEG_444_ISLOW_PROGARI 0a8f1c8f66e113c3cf635df0a475a617)
   set(MD5_PPM_420M_IFAST_ARI 72b59a99bcf1de24c5b27d151bde2437)
@@ -454,15 +482,18 @@ if(WITH_JAVA)
 endif()
 
 set(TEST_LIBTYPES "")
+
 if(ENABLE_SHARED)
   set(TEST_LIBTYPES ${TEST_LIBTYPES} shared)
 endif()
+
 if(ENABLE_STATIC)
   set(TEST_LIBTYPES ${TEST_LIBTYPES} static)
 endif()
 
 set(TESTIMAGES ${CMAKE_CURRENT_SOURCE_DIR}/testimages)
 set(MD5CMP ${CMAKE_CURRENT_BINARY_DIR}/md5/md5cmp)
+
 if(CMAKE_CROSSCOMPILING)
   file(RELATIVE_PATH TESTIMAGES ${CMAKE_CURRENT_BINARY_DIR} ${TESTIMAGES})
   file(RELATIVE_PATH MD5CMP ${CMAKE_CURRENT_BINARY_DIR} ${MD5CMP})
@@ -475,6 +506,7 @@ foreach(libtype ${TEST_LIBTYPES})
     set(dir "")
     set(suffix -static)
   endif()
+
   if(WITH_TURBOJPEG)
     add_test(tjunittest${suffix} tjunittest${suffix})
     add_test(tjunittest${suffix}-alloc tjunittest${suffix} -alloc)
@@ -833,7 +865,6 @@ add_custom_target(testclean COMMAND ${MD5CMP} -P
 #
 # Installer
 #
-
 if(MSVC)
   set(INST_PLATFORM "Visual C++")
   set(INST_NAME ${CMAKE_PROJECT_NAME}-${VERSION}-vc)
@@ -869,6 +900,7 @@ configure_file(release/libjpeg-turbo.nsi.in libjpeg-turbo.nsi @ONLY)
 if(WITH_JAVA)
   set(JAVA_DEPEND java)
 endif()
+
 add_custom_target(installer
   makensis -nocd ${INST_DEFS} libjpeg-turbo.nsi
   DEPENDS jpeg jpeg-static turbojpeg turbojpeg-static rdjpgcom wrjpgcom
@@ -882,6 +914,7 @@ if(WITH_TURBOJPEG)
       LIBRARY DESTINATION lib
       RUNTIME DESTINATION bin)
   endif()
+
   if(ENABLE_STATIC)
     install(TARGETS turbojpeg-static ARCHIVE DESTINATION lib)
     if(NOT ENABLE_SHARED)
@@ -889,11 +922,13 @@ if(WITH_TURBOJPEG)
         DESTINATION bin RENAME tjbench.exe)
     endif()
   endif()
+
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/turbojpeg.h DESTINATION include)
 endif()
 
 if(ENABLE_STATIC)
   install(TARGETS jpeg-static ARCHIVE DESTINATION lib)
+  
   if(NOT ENABLE_SHARED)
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/cjpeg-static.exe
       DESTINATION bin RENAME cjpeg.exe)
